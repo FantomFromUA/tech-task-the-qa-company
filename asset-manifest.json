@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/tech-task-the-qa-company/static/js/main.29dabd25.js",
+    "main.js": "/tech-task-the-qa-company/static/js/main.d168489e.js",
     "index.html": "/tech-task-the-qa-company/index.html",
-    "main.29dabd25.js.map": "/tech-task-the-qa-company/static/js/main.29dabd25.js.map"
+    "main.d168489e.js.map": "/tech-task-the-qa-company/static/js/main.d168489e.js.map"
   },
   "entrypoints": [
-    "static/js/main.29dabd25.js"
+    "static/js/main.d168489e.js"
   ]
 }
