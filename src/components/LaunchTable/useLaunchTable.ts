@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { GridPaginationModel, GridRowSelectionModel, GridSortModel } from '@mui/x-data-grid';
+import { GridColumnVisibilityModel, GridPaginationModel, GridRowSelectionModel, GridSortModel } from '@mui/x-data-grid';
 import { useLaunches, StatusFilter, Launch } from '../../hooks/useLaunches';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const VALID_SORT_FIELDS = new Set(['flight_number', 'name', 'date_utc', 'success']);
 const VALID_SORT_DIRS = new Set(['asc', 'desc']);
 const VALID_STATUS_FILTERS = new Set<StatusFilter>(['all', 'success', 'failed', 'unknown']);
+const COLUMN_FIELDS = new Set(['flight_number', 'name', 'date_utc', 'success']);
 
 function readStateFromUrl(): {
   pagination: GridPaginationModel;
@@ -14,6 +15,7 @@ function readStateFromUrl(): {
   statusFilter: StatusFilter;
   dateFrom: string | null;
   dateTo: string | null;
+  columnVisibility: GridColumnVisibilityModel;
 } {
   const params = new URLSearchParams(globalThis.location.search);
   const page = Number.parseInt(params.get('page') ?? '0', 10);
@@ -22,6 +24,14 @@ function readStateFromUrl(): {
   const sortDir = params.get('sortDir');
   const statusParam = params.get('status');
   const validPageSizes = [5, 10, 25, 50];
+
+  const columnVisibility: GridColumnVisibilityModel = {};
+  const hiddenCols = params.get('hiddenCols');
+  if (hiddenCols) {
+    hiddenCols.split(',').forEach((col) => {
+      if (COLUMN_FIELDS.has(col)) columnVisibility[col] = false;
+    });
+  }
 
   return {
     pagination: {
@@ -38,6 +48,7 @@ function readStateFromUrl(): {
       : 'all',
     dateFrom: params.get('dateFrom'),
     dateTo: params.get('dateTo'),
+    columnVisibility,
   };
 }
 
@@ -48,6 +59,7 @@ function writeStateToUrl(
   statusFilter: StatusFilter,
   dateFrom: string | null,
   dateTo: string | null,
+  columnVisibility: GridColumnVisibilityModel,
 ) {
   const params = new URLSearchParams(globalThis.location.search);
   params.set('page', String(model.page));
@@ -63,6 +75,11 @@ function writeStateToUrl(
   if (statusFilter === 'all') { params.delete('status'); } else { params.set('status', statusFilter); }
   if (dateFrom) { params.set('dateFrom', dateFrom); } else { params.delete('dateFrom'); }
   if (dateTo) { params.set('dateTo', dateTo); } else { params.delete('dateTo'); }
+  const hiddenCols = Object.entries(columnVisibility)
+    .filter(([, visible]) => visible === false)
+    .map(([col]) => col)
+    .join(',');
+  if (hiddenCols) { params.set('hiddenCols', hiddenCols); } else { params.delete('hiddenCols'); }
   globalThis.history.replaceState(null, '', `?${params.toString()}`);
 }
 
@@ -82,6 +99,8 @@ export function useLaunchTable() {
 
   const [dateFrom, setDateFrom] = useState<string | null>(initialState.dateFrom);
   const [dateTo, setDateTo] = useState<string | null>(initialState.dateTo);
+
+  const [columnVisibility, setColumnVisibility] = useState<GridColumnVisibilityModel>(initialState.columnVisibility);
 
   const [selectionModel, setSelectionModel] = useState<GridRowSelectionModel>({
     type: 'include',
@@ -105,19 +124,19 @@ export function useLaunchTable() {
 
   const handlePaginationChange = (model: GridPaginationModel) => {
     setPaginationModel(model);
-    writeStateToUrl(model, search, sortModel, statusFilter, dateFrom, dateTo);
+    writeStateToUrl(model, search, sortModel, statusFilter, dateFrom, dateTo, columnVisibility);
   };
 
   const handleSortChange = (model: GridSortModel) => {
     setSortModel(model);
-    writeStateToUrl(paginationModel, search, model, statusFilter, dateFrom, dateTo);
+    writeStateToUrl(paginationModel, search, model, statusFilter, dateFrom, dateTo, columnVisibility);
   };
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
     const resetModel = { ...paginationModel, page: 0 };
     setPaginationModel(resetModel);
-    writeStateToUrl(resetModel, value, sortModel, statusFilter, dateFrom, dateTo);
+    writeStateToUrl(resetModel, value, sortModel, statusFilter, dateFrom, dateTo, columnVisibility);
   };
 
   const handleDateFromChange = (value: string = '') => {
@@ -125,7 +144,7 @@ export function useLaunchTable() {
     setDateFrom(next);
     const resetModel = { ...paginationModel, page: 0 };
     setPaginationModel(resetModel);
-    writeStateToUrl(resetModel, search, sortModel, statusFilter, next, dateTo);
+    writeStateToUrl(resetModel, search, sortModel, statusFilter, next, dateTo, columnVisibility);
   };
 
   const handleDateToChange = (value: string = '') => {
@@ -133,7 +152,7 @@ export function useLaunchTable() {
     setDateTo(next);
     const resetModel = { ...paginationModel, page: 0 };
     setPaginationModel(resetModel);
-    writeStateToUrl(resetModel, search, sortModel, statusFilter, dateFrom, next);
+    writeStateToUrl(resetModel, search, sortModel, statusFilter, dateFrom, next, columnVisibility);
   };
 
   const handleStatusFilterChange = (_: React.MouseEvent, value: StatusFilter | null) => {
@@ -141,7 +160,12 @@ export function useLaunchTable() {
     setStatusFilter(next);
     const resetModel = { ...paginationModel, page: 0 };
     setPaginationModel(resetModel);
-    writeStateToUrl(resetModel, search, sortModel, next, dateFrom, dateTo);
+    writeStateToUrl(resetModel, search, sortModel, next, dateFrom, dateTo, columnVisibility);
+  };
+
+  const handleColumnVisibilityChange = (model: GridColumnVisibilityModel) => {
+    setColumnVisibility(model);
+    writeStateToUrl(paginationModel, search, sortModel, statusFilter, dateFrom, dateTo, model);
   };
 
   const selectedIds =
@@ -172,6 +196,8 @@ export function useLaunchTable() {
     dateTo,
     handleDateFromChange,
     handleDateToChange,
+    columnVisibility,
+    handleColumnVisibilityChange,
     selectionModel,
     setSelectionModel,
     selectedIds,

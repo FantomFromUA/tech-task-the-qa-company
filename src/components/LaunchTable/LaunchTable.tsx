@@ -63,6 +63,7 @@ export function LaunchTable() {
     sortModel, handleSortChange,
     statusFilter, handleStatusFilterChange,
     dateFrom, dateTo, handleDateFromChange, handleDateToChange,
+    columnVisibility, handleColumnVisibilityChange,
     selectionModel, setSelectionModel,
     selectedIds, handleCopy,
     snackbarOpen, setSnackbarOpen,
@@ -177,6 +178,8 @@ export function LaunchTable() {
             pageSizeOptions={[5, 10, 25, 50]}
             loading={loading}
             onRowClick={(params) => setSelectedLaunch(params.row)}
+            columnVisibilityModel={columnVisibility}
+            onColumnVisibilityModelChange={handleColumnVisibilityChange}
             disableRowSelectionOnClick
             disableColumnFilter
             sx={{
