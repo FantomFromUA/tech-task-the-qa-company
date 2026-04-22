@@ -173,6 +173,16 @@ export function useLaunchTable() {
       ? selectionModel.ids
       : new Set(launches.map((r) => r.id).filter((id) => !selectionModel.ids.has(id)));
 
+  const handleResetFilters = () => {
+    setSearch('');
+    setDateFrom(null);
+    setDateTo(null);
+    setStatusFilter('all');
+    const resetModel = { ...paginationModel, page: 0 };
+    setPaginationModel(resetModel);
+    writeStateToUrl(resetModel, '', sortModel, 'all', null, null, columnVisibility);
+  };
+
   const handleCopy = (formatRow: (row: (typeof launches)[0]) => string) => {
     const selectedRows = launches.filter((row) => selectedIds.has(row.id));
     const text = selectedRows.map(formatRow).join('\n');
@@ -196,6 +206,7 @@ export function useLaunchTable() {
     dateTo,
     handleDateFromChange,
     handleDateToChange,
+    handleResetFilters,
     columnVisibility,
     handleColumnVisibilityChange,
     selectionModel,

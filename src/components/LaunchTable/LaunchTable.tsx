@@ -10,7 +10,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
-  Typography,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { Launch } from '../../hooks/useLaunches';
@@ -33,8 +32,19 @@ function formatDate(dateUtc: string): string {
   return new Date(dateUtc).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function formatRowForCopy(row: Launch): string {
-  return `#${row.flight_number} | ${row.name} | ${formatDate(row.date_utc)} | ${getStatusLabel(row)}`;
+const COPY_FIELDS: { field: string; getValue: (row: Launch) => string }[] = [
+  { field: 'flight_number', getValue: (row) => `#${row.flight_number}` },
+  { field: 'name',          getValue: (row) => row.name },
+  { field: 'date_utc',      getValue: (row) => formatDate(row.date_utc) },
+  { field: 'success',       getValue: (row) => getStatusLabel(row) },
+];
+
+function makeRowFormatter(visibility: Record<string, boolean>) {
+  return (row: Launch) =>
+    COPY_FIELDS
+      .filter(({ field }) => visibility[field] !== false)
+      .map(({ getValue }) => getValue(row))
+      .join(' | ');
 }
 
 const columns: GridColDef<Launch>[] = [
@@ -62,7 +72,7 @@ export function LaunchTable() {
     paginationModel, handlePaginationChange,
     sortModel, handleSortChange,
     statusFilter, handleStatusFilterChange,
-    dateFrom, dateTo, handleDateFromChange, handleDateToChange,
+    dateFrom, dateTo, handleDateFromChange, handleDateToChange, handleResetFilters,
     columnVisibility, handleColumnVisibilityChange,
     selectionModel, setSelectionModel,
     selectedIds, handleCopy,
@@ -78,20 +88,9 @@ export function LaunchTable() {
         </Alert>
       )}
 
-      <Box sx={{
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        justifyContent: 'space-between',
-        alignItems: { xs: 'stretch', md: 'center' },
-        mb: 1,
-        gap: 1.5,
-      }}>
-        <Box sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'stretch', sm: 'center' },
-          gap: 1.5,
-        }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 1 }}>
+        {/* Row 1: Search + Date pickers (same row on desktop, stacked on mobile) */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' }, gap: 1, flexWrap: 'wrap' }}>
           <TextField
             size="small"
             placeholder="Search launches..."
@@ -108,8 +107,7 @@ export function LaunchTable() {
             }}
             sx={{ width: { xs: '100%', sm: 280 } }}
           />
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <TextField
               size="small"
               type="date"
@@ -127,37 +125,65 @@ export function LaunchTable() {
               slotProps={{ inputLabel: { shrink: true } }}
             />
           </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-              Filter by status:
-            </Typography>
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-            >
-              <ToggleButton value="all">All</ToggleButton>
-              <ToggleButton value="success">Success</ToggleButton>
-              <ToggleButton value="failed">Failed</ToggleButton>
-              <ToggleButton value="unknown">Unknown</ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
         </Box>
 
-        {selectedIds.size > 0 && (
-          <Tooltip title="Copy selected rows to clipboard">
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => handleCopy(formatRowForCopy)}
-              sx={{ alignSelf: { xs: 'flex-start', md: 'center' } }}
-            >
-              Copy {selectedIds.size} selected
-            </Button>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+          >
+            <ToggleButton value="all">All</ToggleButton>
+            <ToggleButton value="success">Success</ToggleButton>
+            <ToggleButton value="failed">Failed</ToggleButton>
+            <ToggleButton value="unknown">Unknown</ToggleButton>
+          </ToggleButtonGroup>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleResetFilters}
+            disabled={!search && statusFilter === 'all' && !dateFrom && !dateTo}
+            sx={{
+              color: 'success.main',
+              borderColor: 'success.main',
+              transition: 'all 0.2s ease',
+              '&:hover:not(:disabled)': {
+                backgroundColor: 'success.main',
+                borderColor: 'success.main',
+                color: 'white',
+                transform: 'scale(1.05)',
+                boxShadow: '0 4px 12px rgba(46, 125, 50, 0.4)',
+              },
+            }}
+          >
+            Reset filters
+          </Button>
+          <Tooltip title={selectedIds.size > 0 ? 'Copy selected rows to clipboard' : 'Select rows to copy'}>
+            <span>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={selectedIds.size === 0}
+                onClick={() => handleCopy(makeRowFormatter(columnVisibility))}
+                sx={{
+                  transition: 'all 0.2s ease',
+                  '&:hover:not(:disabled)': {
+                    backgroundColor: 'primary.main',
+                    borderColor: 'primary.main',
+                    color: 'white',
+                    transform: 'scale(1.05)',
+                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
+                  },
+                }}
+              >
+                {selectedIds.size > 0 ? `Copy ${selectedIds.size} selected` : 'Copy selected'}
+              </Button>
+            </span>
           </Tooltip>
-        )}
+          </Box>
+        </Box>
       </Box>
 
       <Box sx={{ width: '100%', overflowX: 'auto' }}>
@@ -180,6 +206,7 @@ export function LaunchTable() {
             onRowClick={(params) => setSelectedLaunch(params.row)}
             columnVisibilityModel={columnVisibility}
             onColumnVisibilityModelChange={handleColumnVisibilityChange}
+            slotProps={{ pagination: { showFirstButton: true, showLastButton: true } }}
             disableRowSelectionOnClick
             disableColumnFilter
             sx={{
