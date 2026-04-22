@@ -2,6 +2,7 @@
   "name": "tech-task-the-qa-company",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://FantomFromUA.github.io/tech-task-the-qa-company",
   "dependencies": {
     "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
@@ -21,6 +22,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "dev": "react-scripts start",
     "build": "react-scripts build",
@@ -44,5 +47,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
