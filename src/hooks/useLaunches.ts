@@ -36,6 +36,8 @@ interface UseLaunchesOptions {
   sortField: string | null;
   sortDir: 'asc' | 'desc';
   statusFilter: StatusFilter;
+  dateFrom: string | null;
+  dateTo: string | null;
 }
 
 interface UseLaunchesResult {
@@ -52,7 +54,7 @@ function buildStatusQuery(statusFilter: StatusFilter): object {
   return {};
 }
 
-export function useLaunches({ page, pageSize, search, sortField, sortDir, statusFilter }: UseLaunchesOptions): UseLaunchesResult {
+export function useLaunches({ page, pageSize, search, sortField, sortDir, statusFilter, dateFrom, dateTo }: UseLaunchesOptions): UseLaunchesResult {
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [totalDocs, setTotalDocs] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -70,6 +72,12 @@ export function useLaunches({ page, pageSize, search, sortField, sortDir, status
         query: {
           ...(search ? { name: { $regex: search, $options: 'i' } } : {}),
           ...buildStatusQuery(statusFilter),
+          ...(dateFrom || dateTo ? {
+            date_utc: {
+              ...(dateFrom ? { $gte: new Date(dateFrom).toISOString() } : {}),
+              ...(dateTo ? { $lte: new Date(dateTo + 'T23:59:59.999Z').toISOString() } : {}),
+            },
+          } : {}),
         },
         options: {
           page: page + 1,
@@ -95,7 +103,7 @@ export function useLaunches({ page, pageSize, search, sortField, sortDir, status
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [page, pageSize, search, sortField, sortDir, statusFilter]);
+  }, [page, pageSize, search, sortField, sortDir, statusFilter, dateFrom, dateTo]);
 
   return { launches, totalDocs, loading, error };
 }

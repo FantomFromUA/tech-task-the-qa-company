@@ -12,6 +12,8 @@ function readStateFromUrl(): {
   search: string;
   sortModel: GridSortModel;
   statusFilter: StatusFilter;
+  dateFrom: string | null;
+  dateTo: string | null;
 } {
   const params = new URLSearchParams(globalThis.location.search);
   const page = Number.parseInt(params.get('page') ?? '0', 10);
@@ -34,6 +36,8 @@ function readStateFromUrl(): {
     statusFilter: VALID_STATUS_FILTERS.has(statusParam as StatusFilter)
       ? (statusParam as StatusFilter)
       : 'all',
+    dateFrom: params.get('dateFrom'),
+    dateTo: params.get('dateTo'),
   };
 }
 
@@ -42,6 +46,8 @@ function writeStateToUrl(
   search: string,
   sortModel: GridSortModel,
   statusFilter: StatusFilter,
+  dateFrom: string | null,
+  dateTo: string | null,
 ) {
   const params = new URLSearchParams(globalThis.location.search);
   params.set('page', String(model.page));
@@ -55,6 +61,8 @@ function writeStateToUrl(
     params.delete('sortDir');
   }
   if (statusFilter === 'all') { params.delete('status'); } else { params.set('status', statusFilter); }
+  if (dateFrom) { params.set('dateFrom', dateFrom); } else { params.delete('dateFrom'); }
+  if (dateTo) { params.set('dateTo', dateTo); } else { params.delete('dateTo'); }
   globalThis.history.replaceState(null, '', `?${params.toString()}`);
 }
 
@@ -72,6 +80,9 @@ export function useLaunchTable() {
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialState.statusFilter);
 
+  const [dateFrom, setDateFrom] = useState<string | null>(initialState.dateFrom);
+  const [dateTo, setDateTo] = useState<string | null>(initialState.dateTo);
+
   const [selectionModel, setSelectionModel] = useState<GridRowSelectionModel>({
     type: 'include',
     ids: new Set(),
@@ -88,23 +99,41 @@ export function useLaunchTable() {
     sortField,
     sortDir,
     statusFilter,
+    dateFrom,
+    dateTo,
   });
 
   const handlePaginationChange = (model: GridPaginationModel) => {
     setPaginationModel(model);
-    writeStateToUrl(model, search, sortModel, statusFilter);
+    writeStateToUrl(model, search, sortModel, statusFilter, dateFrom, dateTo);
   };
 
   const handleSortChange = (model: GridSortModel) => {
     setSortModel(model);
-    writeStateToUrl(paginationModel, search, model, statusFilter);
+    writeStateToUrl(paginationModel, search, model, statusFilter, dateFrom, dateTo);
   };
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
     const resetModel = { ...paginationModel, page: 0 };
     setPaginationModel(resetModel);
-    writeStateToUrl(resetModel, value, sortModel, statusFilter);
+    writeStateToUrl(resetModel, value, sortModel, statusFilter, dateFrom, dateTo);
+  };
+
+  const handleDateFromChange = (value: string = '') => {
+    const next = value || null;
+    setDateFrom(next);
+    const resetModel = { ...paginationModel, page: 0 };
+    setPaginationModel(resetModel);
+    writeStateToUrl(resetModel, search, sortModel, statusFilter, next, dateTo);
+  };
+
+  const handleDateToChange = (value: string = '') => {
+    const next = value || null;
+    setDateTo(next);
+    const resetModel = { ...paginationModel, page: 0 };
+    setPaginationModel(resetModel);
+    writeStateToUrl(resetModel, search, sortModel, statusFilter, dateFrom, next);
   };
 
   const handleStatusFilterChange = (_: React.MouseEvent, value: StatusFilter | null) => {
@@ -112,7 +141,7 @@ export function useLaunchTable() {
     setStatusFilter(next);
     const resetModel = { ...paginationModel, page: 0 };
     setPaginationModel(resetModel);
-    writeStateToUrl(resetModel, search, sortModel, next);
+    writeStateToUrl(resetModel, search, sortModel, next, dateFrom, dateTo);
   };
 
   const selectedIds =
@@ -139,6 +168,10 @@ export function useLaunchTable() {
     handleSortChange,
     statusFilter,
     handleStatusFilterChange,
+    dateFrom,
+    dateTo,
+    handleDateFromChange,
+    handleDateToChange,
     selectionModel,
     setSelectionModel,
     selectedIds,

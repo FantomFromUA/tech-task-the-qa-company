@@ -62,6 +62,7 @@ export function LaunchTable() {
     paginationModel, handlePaginationChange,
     sortModel, handleSortChange,
     statusFilter, handleStatusFilterChange,
+    dateFrom, dateTo, handleDateFromChange, handleDateToChange,
     selectionModel, setSelectionModel,
     selectedIds, handleCopy,
     snackbarOpen, setSnackbarOpen,
@@ -106,6 +107,25 @@ export function LaunchTable() {
             }}
             sx={{ width: { xs: '100%', sm: 280 } }}
           />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <TextField
+              size="small"
+              type="date"
+              label="From"
+              value={dateFrom ?? ''}
+              onChange={(e) => handleDateFromChange(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              size="small"
+              type="date"
+              label="To"
+              value={dateTo ?? ''}
+              onChange={(e) => handleDateToChange(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+          </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
@@ -158,7 +178,13 @@ export function LaunchTable() {
             loading={loading}
             onRowClick={(params) => setSelectedLaunch(params.row)}
             disableRowSelectionOnClick
-            sx={{ '& .MuiDataGrid-row': { cursor: 'pointer' } }}
+            disableColumnFilter
+            sx={{
+              '& .MuiDataGrid-row': { cursor: 'pointer' },
+              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-select, & .MuiTablePagination-selectIcon': {
+                display: 'block',
+              },
+            }}
           />
         </Box>
       </Box>
